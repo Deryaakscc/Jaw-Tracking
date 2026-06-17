@@ -3,8 +3,8 @@ import numpy as np
 import glob
 
 
-CHECKERBOARD = (8, 5) 
-SQUARE_SIZE = 30  # mm (karenin bir kenarı)
+CHECKERBOARD = (9, 6) 
+SQUARE_SIZE = 25  # mm (karenin bir kenarı)
 
 
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
