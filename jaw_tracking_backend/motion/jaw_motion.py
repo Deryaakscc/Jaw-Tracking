@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+import cv2
 import numpy as np
 
 from jaw_tracking_backend.detection.aruco_detector import DetectedMarker
@@ -11,6 +12,8 @@ from jaw_tracking_backend.models.jaw_frame import RelativeMovement
 class JawMotionCalculator:
     def __init__(self, marker_size_mm: float = 30.0) -> None:
         self.marker_size_mm = marker_size_mm
+        self.kalman_dx = self._create_kalman()
+        self.kalman_dy = self._create_kalman()
 
     def calculate(
         self,
@@ -23,6 +26,10 @@ class JawMotionCalculator:
         dx_px = jaw.marker.x_px - reference.marker.x_px
         dy_px = jaw.marker.y_px - reference.marker.y_px
         dtheta_deg = _normalize_angle(jaw.marker.angle_deg - reference.marker.angle_deg)
+
+        # Kalman filtresi ile düzeltme
+        dx_px = self._apply_kalman(self.kalman_dx, dx_px)
+        dy_px = self._apply_kalman(self.kalman_dy, dy_px)
 
         dz_px = 0.0
         dx_mm = dy_mm = dz_mm = None
@@ -49,6 +56,23 @@ class JawMotionCalculator:
             dy_mm=dy_mm,
             dz_mm=dz_mm,
         )
+
+    @staticmethod
+    def _create_kalman() -> cv2.KalmanFilter:
+        """Kalman filtresi oluştur (1D pozisyon ve hız için)."""
+        kalman = cv2.KalmanFilter(2, 1)
+        kalman.measurementMatrix = np.array([[1, 0]], np.float32)
+        kalman.transitionMatrix = np.array([[1, 1], [0, 1]], np.float32)
+        kalman.processNoiseCov = np.array([[1, 0], [0, 1]], np.float32) * 0.005
+        kalman.measurementNoiseCov = np.array([[1]], np.float32) * 0.2
+        return kalman
+
+    @staticmethod
+    def _apply_kalman(kalman: cv2.KalmanFilter, measurement: float) -> float:
+        """Ölçümü Kalman filtresinden geçir ve tahmin edilen değeri döndür."""
+        kalman.correct(np.array([[np.float32(measurement)]]))
+        prediction = kalman.predict()
+        return float(prediction[0][0])
 
 
 def _estimate_mm_per_px(corners: np.ndarray, marker_size_mm: float) -> Optional[float]:
