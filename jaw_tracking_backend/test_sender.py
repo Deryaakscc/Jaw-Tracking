@@ -71,7 +71,7 @@ def build_test_frame(
     ref_y_px = 220.0
     dx_px = 12.0 * math.sin(frame_id * 0.08)
     dy_px = 45.0 + amplitude_px * open_ratio
-    dz_px = 8.0 * math.sin(frame_id * 0.05)
+    dz_px = 15.0 * math.sin(frame_id * 0.04)
     dtheta_deg = 10.0 * math.sin(frame_id * 0.06)
 
     dx_mm = 0.15 * dx_px
