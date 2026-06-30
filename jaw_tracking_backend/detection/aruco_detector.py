@@ -90,14 +90,35 @@ class ArucoDetector:
         if camera_matrix is None or dist_coeffs is None:
             return []
 
-        rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
-            corners,
-            self.marker_size_mm,
-            camera_matrix,
-            dist_coeffs,
-        )
-        return [(rvecs[i][0], tvecs[i][0]) for i in range(len(corners))]
+        
+        half_size = self.marker_size_mm / 2.0
+        obj_points = np.array([
+            [-half_size,  half_size, 0], # Sol üst köşe
+            [ half_size,  half_size, 0], # Sağ üst köşe
+            [ half_size, -half_size, 0], # Sağ alt köşe
+            [-half_size, -half_size, 0]  # Sol alt köşe
+        ], dtype=np.float32)
 
+        poses = []
+        
+        for corner in corners:
+            
+            image_points = corner.reshape((4, 2))
+
+            success, rvec, tvec = cv2.solvePnP(
+                objectPoints=obj_points, 
+                imagePoints=image_points, 
+                cameraMatrix=camera_matrix, 
+                distCoeffs=dist_coeffs, 
+                flags=cv2.SOLVEPNP_IPPE_SQUARE  # Özel parametremiz
+            )
+            
+            if success:
+                poses.append((rvec, tvec))
+            else:
+                poses.append((None, None))
+                
+        return poses
 
 def _marker_angle_deg(corners: np.ndarray) -> float:
     edge = corners[1] - corners[0]
